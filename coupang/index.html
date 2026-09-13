@@ -1,0 +1,266 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>쿠팡 정산 역산기</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#F5F6F3;--paper:#FFFFFF;--ink:#1B2A41;--ink-2:#4B5A70;--ink-3:#7E8A98;--line:#DDE2E8;--sun:#F2B203;--sun-soft:#FFF3C4;--red:#C8412E;--red-soft:#FBE3DF;--green:#1F7A5C;--green-soft:#DCEFE6;--code:#EDF0F4}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0F1622;--paper:#171F2D;--ink:#EEF2F8;--ink-2:#B7C2D3;--ink-3:#8593A8;--line:#2A3547;--sun:#F5C231;--sun-soft:#3A3010;--red:#F08072;--red-soft:#3D1F1A;--green:#4CC5A1;--green-soft:#143328;--code:#1F2A3B}}
+:root[data-theme="dark"]{--bg:#0F1622;--paper:#171F2D;--ink:#EEF2F8;--ink-2:#B7C2D3;--ink-3:#8593A8;--line:#2A3547;--sun:#F5C231;--sun-soft:#3A3010;--red:#F08072;--red-soft:#3D1F1A;--green:#4CC5A1;--green-soft:#143328;--code:#1F2A3B}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:"Noto Sans KR",system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:15px;line-height:1.6;margin:0}
+.wrap{max-width:1040px;margin:0 auto;padding:32px 20px 80px}
+h1{font-size:26px;margin:0 0 6px;letter-spacing:-.01em}
+.sub{color:var(--ink-2);margin:0 0 20px;max-width:70ch}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin-bottom:16px}
+.card h2{font-size:16px;margin:0 0 10px}
+.drop{border:2px dashed var(--line);border-radius:8px;padding:34px 20px;text-align:center;color:var(--ink-2);cursor:pointer;transition:border-color .15s}
+.drop.over{border-color:var(--sun);background:var(--sun-soft)}
+.drop b{color:var(--ink)}
+.drop input{display:none}
+.note{font-size:12.5px;color:var(--ink-3);margin-top:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+label.f{display:grid;gap:4px;font-size:13px;color:var(--ink-2)}
+select,input[type=number],input[type=text]{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);font:inherit;font-size:14px}
+input[type=number]{font-family:"IBM Plex Mono",monospace;text-align:right}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:13px;background:var(--code);cursor:pointer;user-select:none}
+.chip input{margin:0}
+.chip.on{background:var(--sun-soft);border-color:var(--sun)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:6px 0 14px}
+.tile{background:var(--code);border-radius:8px;padding:12px 14px}
+.tile .k{font-size:12px;color:var(--ink-3)}
+.tile .v{font-family:"IBM Plex Mono",monospace;font-size:20px;font-weight:500;font-variant-numeric:tabular-nums}
+.tile.bad .v{color:var(--red)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:13px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+th{background:var(--code);font-size:12px;color:var(--ink-3);cursor:pointer;position:sticky;top:0}
+th.l,td.l{text-align:left;white-space:normal;min-width:160px;position:sticky;left:0;background:var(--paper);z-index:1}
+th.l{background:var(--code)}
+tr.loss td.l{background:var(--red-soft)}
+@media (max-width:640px){.wrap{padding:20px 12px 60px}h1{font-size:22px}.tile .v{font-size:17px}td.l{min-width:130px}}
+td.n{font-family:"IBM Plex Mono",monospace}
+tr.loss td{background:var(--red-soft)}
+tr.loss td.l::before{content:"적자 ";color:var(--red);font-weight:700;font-size:11px}
+td input[type=number]{width:96px;padding:4px 6px;font-size:13px}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+button{font:inherit;font-size:14px;padding:9px 14px;border-radius:6px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+button.pri{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--sun);outline-offset:2px}
+.hint{background:var(--sun-soft);border-left:4px solid var(--sun);padding:10px 14px;border-radius:4px;font-size:13.5px;margin-top:10px}
+.err{background:var(--red-soft);border-left:4px solid var(--red);padding:10px 14px;border-radius:4px;font-size:13.5px;margin-top:10px}
+footer{color:var(--ink-3);font-size:12.5px;margin-top:30px;line-height:1.7}
+canvas{display:none}
+</style>
+
+<div class="wrap">
+<h1>쿠팡 정산 역산기</h1>
+<p class="sub">정산 엑셀 올리면 끝. 상품별로 어디서 얼마 빠졌는지 나오고, 원가를 넣으면 적자 상품이 빨간색으로 뜹니다. 2026년 7월 개편 반영. 파일은 내 브라우저에서만 계산되고 어디로도 안 갑니다.</p>
+
+<div class="card">
+  <div class="drop" id="drop"><b>정산 엑셀 파일 올리기</b><br><span style="font-size:13px">클릭하거나 여기로 끌어다 놓으세요 · xlsx, xls, csv</span><input type="file" id="file" accept=".xlsx,.xls,.csv"></div>
+  <div class="note" style="margin-top:12px;line-height:1.9">
+    <b style="color:var(--ink)">엑셀은 여기서 받습니다</b><br>
+    ① 쿠팡 윙 로그인 → 위쪽 메뉴 <b>정산</b><br>
+    ② <b>정산현황</b> → 기간 선택 → <b>엑셀 다운로드 요청</b><br>
+    ③ 받은 파일을 그대로 올리면 됩니다. 매출내역 파일도 됩니다.
+  </div>
+  <div id="err" class="err" hidden></div>
+</div>
+
+<div class="card" id="mapCard" hidden>
+  <details id="mapDetails"><summary style="cursor:pointer;font-weight:700;font-size:15px">숫자가 이상하면 여기서 열을 바꾸세요 <span class="note" style="display:inline;font-weight:400">자동으로 찾은 값이 틀릴 때만</span></summary>
+  <div style="height:10px"></div>
+  <div class="grid">
+    <label class="f">상품명 열<select id="colProduct"></select></label>
+    <label class="f">옵션 열 (없으면 비움)<select id="colOption"></select></label>
+    <label class="f">수량 열 (없으면 1로 계산)<select id="colQty"></select></label>
+    <label class="f">판매금액 열<select id="colSales"></select></label>
+    <label class="f">정산금액 열 (있으면 우선 사용)<select id="colSettle"></select></label>
+  </div>
+  <div style="margin-top:12px;font-size:13px;color:var(--ink-2)">공제 항목으로 잡을 열. 수수료·이용료·반품·광고·보관·쿠폰이 들어간 열을 자동으로 켰습니다.</div>
+  <div class="chips" id="chips"></div>
+  <div class="grid" style="margin-top:12px">
+    <label class="f">월 서비스이용료 (원) <input type="number" id="svcFee" value="55000"></label>
+    <label class="f">이용료 배분 방식<select id="svcMode"><option value="sales">매출 비중대로 상품에 배분</option><option value="none">배분 안 함 (총계에만 반영)</option></select></label>
+    <label class="f">정산 열이 없을 때 결제수수료 (%)<input type="number" id="payFee" value="2.9" step="0.1"></label>
+  </div>
+  <div class="btns"><button class="pri" id="run">다시 계산</button></div>
+  </details>
+</div>
+
+<div class="card" id="resCard" hidden>
+  <h2>결과</h2>
+  <div class="tiles" id="tiles"></div>
+  <div class="hint">원가 칸에 사입 단가를 넣으면 실마진이 바로 바뀝니다. 같은 상품명은 이 브라우저에 기억해 둡니다.</div>
+  <div class="tbl" style="margin-top:12px"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+  <div class="btns">
+    <button id="csv">CSV로 저장</button>
+    <button id="img">요약 이미지 저장</button>
+    <button id="reset">다른 파일 올리기</button>
+  </div>
+  <div class="note">기준: 정산 열이 있으면 그 값을 정산으로 쓰고, 없으면 판매금액에서 켜둔 공제 항목과 결제수수료를 뺍니다. 세금·환율·배송비 실비는 반영하지 않습니다. 숫자가 이상하면 열 맞추기를 다시 확인하세요.</div>
+</div>
+
+<footer>만든 곳: 스레드 @lazyfix_ · 귀찮은 일 보이면 툴로 만듭니다. 오류 제보는 스레드 답글로 주시면 하루 안에 고칩니다.</footer>
+<canvas id="cv" width="1080" height="1080"></canvas>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const KW={
+  product:["노출상품명","등록상품명","상품명","상품 이름","상품이름","product"],
+  option:["옵션명","옵션","option"],
+  qty:["수량","qty","quantity"],
+  sales:["최종결제금액","결제금액","판매금액","판매가","상품금액","매출","총 판매","판매 금액"],
+  settle:["정산금액","정산액","실정산","지급액","정산 금액","지급 금액"],
+  deduct:["수수료","이용료","반품","회수","광고","보관","쿠폰","할인","공제","차감","프로모션","배송비"]
+};
+let rows=[],headers=[],deductCols=[],results=[];
+const costMem=JSON.parse(localStorage.getItem("cs_cost")||"{}");
+
+function norm(s){return String(s??"").replace(/\s+/g,"").toLowerCase()}
+function num(v){if(v==null||v==="")return 0;if(typeof v==="number")return v;const n=parseFloat(String(v).replace(/[^\d.\-]/g,""));return isNaN(n)?0:n}
+function fmt(n){return Math.round(n).toLocaleString("ko-KR")}
+function pick(kws){const h=headers.map(norm);for(const k of kws){const i=h.findIndex(x=>x.includes(norm(k)));if(i>=0)return i}return -1}
+
+function showErr(m){const e=$("#err");e.textContent=m;e.hidden=false}
+
+function load(file){
+  $("#err").hidden=true;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:"array"});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+      let hi=aoa.findIndex(r=>r.filter(c=>typeof c==="string"&&c.trim()).length>=4);
+      if(hi<0)return showErr("표 머리글을 찾지 못했습니다. 첫 시트에 열 이름이 있는지 확인하세요.");
+      headers=aoa[hi].map(h=>String(h).trim());
+      rows=aoa.slice(hi+1).filter(r=>r.some(c=>c!==""));
+      if(!rows.length)return showErr("데이터 행이 없습니다.");
+      buildMap();
+    }catch(err){showErr("파일을 읽지 못했습니다. 엑셀에서 다시 저장해 올려보세요. ("+err.message+")")}
+  };
+  r.readAsArrayBuffer(file);
+}
+
+function opts(sel,idx,allowNone){
+  sel.innerHTML=(allowNone?'<option value="-1">없음</option>':"")+headers.map((h,i)=>`<option value="${i}">${h||"(빈 열 "+(i+1)+")"}</option>`).join("");
+  sel.value=String(idx);
+}
+function buildMap(){
+  opts($("#colProduct"),Math.max(pick(KW.product),0),false);
+  opts($("#colOption"),pick(KW.option),true);
+  opts($("#colQty"),pick(KW.qty),true);
+  opts($("#colSales"),Math.max(pick(KW.sales),0),false);
+  opts($("#colSettle"),pick(KW.settle),true);
+  const c=$("#chips");c.innerHTML="";deductCols=[];
+  headers.forEach((h,i)=>{
+    const n=norm(h);if(!n)return;
+    const isD=KW.deduct.some(k=>n.includes(norm(k)))&&!KW.settle.some(k=>n.includes(norm(k)))&&!KW.sales.some(k=>n.includes(norm(k)));
+    const hasNum=rows.slice(0,50).some(r=>num(r[i])!==0);
+    if(!hasNum&&!isD)return;
+    const l=document.createElement("label");l.className="chip"+(isD?" on":"");
+    l.innerHTML=`<input type="checkbox" ${isD?"checked":""} data-i="${i}"> ${h}`;
+    l.querySelector("input").addEventListener("change",ev=>l.classList.toggle("on",ev.target.checked));
+    c.appendChild(l);
+  });
+  $("#mapCard").hidden=false;$("#mapDetails").open=false;
+  run();
+  $("#resCard").scrollIntoView({behavior:"smooth"});
+}
+
+function run(){
+  const ip=+$("#colProduct").value,io=+$("#colOption").value,iq=+$("#colQty").value,is=+$("#colSales").value,ist=+$("#colSettle").value;
+  deductCols=[...document.querySelectorAll("#chips input:checked")].map(x=>+x.dataset.i).filter(i=>i!==is&&i!==ist);
+  const payFee=num($("#payFee").value)/100, svc=num($("#svcFee").value), svcMode=$("#svcMode").value;
+  const g=new Map();
+  for(const r of rows){
+    const name=String(r[ip]??"").trim()||"(상품명 없음)";
+    const opt=io>=0?String(r[io]??"").trim():"";
+    const key=opt?name+" / "+opt:name;
+    const o=g.get(key)||{name,opt,qty:0,sales:0,settle:0,hasSettle:ist>=0,ded:{},rows:0};
+    o.rows++;o.qty+=iq>=0?Math.abs(num(r[iq]))||0:1;
+    o.sales+=num(r[is]);
+    if(ist>=0)o.settle+=num(r[ist]);
+    for(const i of deductCols){o.ded[headers[i]]=(o.ded[headers[i]]||0)+Math.abs(num(r[i]))}
+    g.set(key,o);
+  }
+  results=[...g.values()];
+  const totalSales=results.reduce((a,o)=>a+o.sales,0)||1;
+  for(const o of results){
+    o.dedSum=Object.values(o.ded).reduce((a,b)=>a+b,0);
+    if(!o.hasSettle){o.pay=o.sales*payFee;o.settle=o.sales-o.dedSum-o.pay}else{o.pay=0}
+    o.svc=svcMode==="sales"?svc*(o.sales/totalSales):0;
+    o.unit=costMem[o.name]??0;
+    calc(o);
+  }
+  render();
+}
+function calc(o){o.cost=o.unit*o.qty;o.margin=o.settle-o.svc-o.cost;o.rate=o.sales?o.margin/o.sales*100:0}
+
+let sortKey="margin",sortAsc=true;
+function render(){
+  const svcMode=$("#svcMode").value,svc=num($("#svcFee").value);
+  const T=results.reduce((a,o)=>{a.sales+=o.sales;a.ded+=o.dedSum+o.pay;a.settle+=o.settle;a.margin+=o.margin;a.loss+=o.margin<0?1:0;return a},{sales:0,ded:0,settle:0,margin:0,loss:0});
+  const svcTotal=svcMode==="none"?svc:0;
+  $("#tiles").innerHTML=[
+    ["총 판매금액",fmt(T.sales)+"원"],["빠진 돈 합계",fmt(T.ded+svcTotal)+"원"],["정산 합계",fmt(T.settle-svcTotal)+"원"],
+    ["실마진 합계",fmt(T.margin-svcTotal)+"원",T.margin-svcTotal<0],["적자 상품",T.loss+"개",T.loss>0],["상품 수",results.length+"개"]
+  ].map(([k,v,bad])=>`<div class="tile${bad?" bad":""}"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+  const dedNames=[...new Set(results.flatMap(o=>Object.keys(o.ded)))];
+  const cols=[["name","상품",true],["qty","수량"],["sales","판매금액"],...dedNames.map(n=>["ded:"+n,n]),...(results.some(o=>o.pay)?[["pay","결제수수료"]]:[]),["settle","정산"],...(svcMode==="sales"?[["svc","이용료 배분"]]:[]),["unit","원가(단가)"],["margin","실마진"],["rate","마진율"]];
+  $("#tbl thead").innerHTML="<tr>"+cols.map(([k,l,left])=>`<th class="${left?"l":""}" data-k="${k}">${l}${sortKey===k?(sortAsc?" ▲":" ▼"):""}</th>`).join("")+"</tr>";
+  const val=(o,k)=>k.startsWith("ded:")?(o.ded[k.slice(4)]||0):o[k];
+  const sorted=[...results].sort((a,b)=>{const x=val(a,sortKey),y=val(b,sortKey);return (typeof x==="string"?x.localeCompare(y):x-y)*(sortAsc?1:-1)});
+  $("#tbl tbody").innerHTML=sorted.map((o,ri)=>`<tr class="${o.margin<0?"loss":""}" data-key="${o.name}${o.opt?" / "+o.opt:""}">`+cols.map(([k,l,left])=>{
+    if(k==="name")return `<td class="l">${o.name}${o.opt?`<div style="font-size:12px;color:var(--ink-3)">${o.opt}</div>`:""}</td>`;
+    if(k==="unit")return `<td><input type="number" value="${o.unit||""}" placeholder="0" data-name="${o.name}"></td>`;
+    if(k==="rate")return `<td class="n">${o.rate.toFixed(1)}%</td>`;
+    if(k==="qty")return `<td class="n">${fmt(o.qty)}</td>`;
+    return `<td class="n">${fmt(val(o,k))}</td>`;
+  }).join("")+"</tr>").join("");
+  $("#resCard").hidden=false;
+  document.querySelectorAll("#tbl th").forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortKey===k)sortAsc=!sortAsc;else{sortKey=k;sortAsc=k==="name"}render()});
+  document.querySelectorAll("#tbl input[type=number]").forEach(inp=>inp.onchange=()=>{
+    const u=num(inp.value);costMem[inp.dataset.name]=u;localStorage.setItem("cs_cost",JSON.stringify(costMem));
+    results.filter(o=>o.name===inp.dataset.name).forEach(o=>{o.unit=u;calc(o)});render();
+  });
+}
+
+$("#run").onclick=run;
+$("#svcMode").onchange=()=>{if(results.length)run()};
+$("#svcFee").onchange=()=>{if(results.length)run()};
+$("#reset").onclick=()=>{rows=[];results=[];$("#mapCard").hidden=true;$("#resCard").hidden=true;$("#file").value="";window.scrollTo({top:0,behavior:"smooth"})};
+
+$("#csv").onclick=()=>{
+  const ths=[...document.querySelectorAll("#tbl th")].map(t=>t.textContent.replace(/ [▲▼]$/,""));
+  const lines=[ths.join(",")];
+  document.querySelectorAll("#tbl tbody tr").forEach(tr=>{lines.push([...tr.children].map(td=>{const i=td.querySelector("input");return '"'+(i?i.value:td.textContent.replace(/\n/g," ").replace(/^적자 /,"")).replace(/"/g,'""')+'"'}).join(","))});
+  const blob=new Blob(["﻿"+lines.join("\n")],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="쿠팡_정산_역산.csv";a.click();
+};
+$("#img").onclick=()=>{
+  const cv=$("#cv"),c=cv.getContext("2d");
+  c.fillStyle="#F2B203";c.fillRect(0,0,1080,1080);
+  c.fillStyle="#1B2A41";c.font="700 56px 'Noto Sans KR',sans-serif";c.fillText("쿠팡 정산 역산 결과",70,120);
+  const tiles=[...document.querySelectorAll("#tiles .tile")].map(t=>[t.querySelector(".k").textContent,t.querySelector(".v").textContent]);
+  c.font="400 34px 'Noto Sans KR',sans-serif";
+  tiles.forEach(([k,v],i)=>{const y=230+i*110;c.font="400 30px 'Noto Sans KR',sans-serif";c.fillText(k,70,y);c.font="700 52px 'IBM Plex Mono',monospace";c.fillText(v,70,y+58)});
+  const worst=[...results].sort((a,b)=>a.margin-b.margin).slice(0,3);
+  c.font="700 34px 'Noto Sans KR',sans-serif";c.fillText("가장 많이 새는 상품",70,920);
+  c.font="400 28px 'Noto Sans KR',sans-serif";worst.forEach((o,i)=>c.fillText(`${i+1}. ${o.name.slice(0,22)}  ${fmt(o.margin)}원`,70,965+i*38));
+  c.font="400 24px 'Noto Sans KR',sans-serif";c.fillText("@lazyfix_ 로 계산",760,1050);
+  const a=document.createElement("a");a.href=cv.toDataURL("image/png");a.download="쿠팡_정산_요약.png";a.click();
+};
+
+const drop=$("#drop"),fi=$("#file");
+drop.onclick=()=>fi.click();
+fi.onchange=()=>fi.files[0]&&load(fi.files[0]);
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over")}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over")}));
+drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];f&&load(f)});
+})();
+</script>
