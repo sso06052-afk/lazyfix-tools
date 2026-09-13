@@ -118,11 +118,12 @@ const KW={
   option:["옵션명","옵션 명","vendoritemname","옵션"],
   vid:["옵션id","옵션 id","vendoritemid","옵션아이디","상품옵션id","광고집행 옵션id","광고집행옵션id","옵션 아이디"],
   qty:["수량","판매수량","주문수량","quantity","qty"],
-  sales:["총판매가","최종결제금액","결제금액","판매금액","판매가","매출금액","상품금액","saleprice","saleamount","총 판매","판매 금액"],
-  settle:["정산금액","정산액","실정산","지급액","정산 금액","지급 금액","settlementamount","정산대상액"],
-  type:["항목구분","구분","saletype","판매유형","거래구분"],
-  deduct:["수수료","이용료","쿠폰","할인","반품","회수","광고","보관","공제","차감","프로모션","분담","부가세"],
-  refundWords:["refund","환불","반품","취소","cancel"]
+  sales:["총판매가","최종결제금액","결제금액","판매금액","판매액","총 판매금액","총판매금액","판매가","매출금액","상품금액","saleprice","saleamount","총 판매","판매 금액","주문금액"],
+  settle:["정산금액","정산예정금액","정산예정액","지급예정액","정산액","실정산","지급액","정산 금액","지급 금액","settlementamount","finalamount","정산대상액"],
+  type:["항목구분","정산유형","구분","saletype","판매유형","거래구분","유형"],
+  deduct:["수수료","이용료","쿠폰","할인","반품","회수","광고","보관","공제","차감","프로모션","분담","부가세","입출고","배송비"],
+  deductExclude:["쿠팡지원","쿠팡부담","쿠팡 부담","율","ratio","동의","기준","대상액","정산대상"],
+  refundWords:["refund","환불","반품","취소","cancel","차감"]
 };
 const AD={vid:["옵션id","옵션 id","광고집행 옵션id","광고집행옵션id","vendoritemid","광고집행 상품id"],name:["광고집행 상품명","상품명","옵션명"],cost:["광고비","총 비용","총비용","광고 비용","비용","cost","spend","집행 금액","집행금액"]};
 let rows=[],headers=[],deductCols=[],results=[],adMap=null,adNameMap=null,adInfo="";
@@ -133,7 +134,18 @@ function num(v){if(v==null||v==="")return 0;if(typeof v==="number")return v;cons
 function fmt(n){return Math.round(n).toLocaleString("ko-KR")}
 function pickIn(hdrs,kws){const h=hdrs.map(norm);for(const k of kws){const i=h.findIndex(x=>x===norm(k));if(i>=0)return i}for(const k of kws){const i=h.findIndex(x=>x.includes(norm(k)));if(i>=0)return i}return -1}
 function pick(kws){return pickIn(headers,kws)}
-function showErr(m){const e=$("#err");e.textContent=m;e.hidden=false}
+const HELP=' 그래도 안 되면 엑셀을 열어 열 이름이 있는 첫 줄만 캡처해서 스레드 @lazyfix_ 로 DM 주세요. 파일은 보내지 않으셔도 됩니다. 하루 안에 맞춰 드립니다.';
+function showErr(m){const e=$("#err");e.textContent=m+HELP;e.hidden=false}
+// CSV는 UTF-8 실패 시 EUC-KR(CP949)로 다시 읽는다. 윙 CSV가 CP949인 경우가 있다.
+function readWB(buf,name){
+  if(/\.csv$/i.test(name||"")){
+    let text;
+    try{text=new TextDecoder("utf-8",{fatal:true}).decode(buf)}catch(_){text=new TextDecoder("euc-kr").decode(buf)}
+    if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+    return XLSX.read(text,{type:"string"});
+  }
+  return XLSX.read(buf,{type:"array"});
+}
 
 // 머리글 탐지: 모든 시트 상위 30행에서 "주문번호/상품명/정산" 키워드가 가장 많은 행
 function findTable(wb,keys){
@@ -156,7 +168,7 @@ function load(file){
   const r=new FileReader();
   r.onload=e=>{
     try{
-      const wb=XLSX.read(e.target.result,{type:"array"});
+      const wb=readWB(e.target.result,file.name);
       const t=findTable(wb,["상품명","주문번호","정산","판매","옵션"]);
       if(!t)return showErr("표 머리글을 찾지 못했습니다. 엑셀 첫 줄에 '상품명'이나 '주문번호' 같은 열 이름이 있는지 확인하세요. 안 되면 첫 줄만 캡처해서 알려주세요.");
       headers=t.aoa[t.r].map(h=>String(h).trim());
@@ -176,7 +188,7 @@ function loadAd(file){
   const r=new FileReader();
   r.onload=e=>{
     try{
-      const wb=XLSX.read(e.target.result,{type:"array"});
+      const wb=readWB(e.target.result,file.name);
       const t=findTable(wb,["광고비","비용","옵션","상품명"]);
       if(!t)return showErr("광고 리포트에서 표 머리글을 찾지 못했습니다. 옵션ID와 광고비 열이 있는 보고서인지 확인하세요.");
       const h=t.aoa[t.r].map(x=>String(x).trim());
@@ -211,7 +223,7 @@ function buildMap(sheet){
   const c=$("#chips");c.innerHTML="";
   headers.forEach((h,i)=>{
     const n=norm(h);if(!n)return;
-    const isD=KW.deduct.some(k=>n.includes(norm(k)))&&!KW.settle.some(k=>n.includes(norm(k)))&&!KW.sales.some(k=>n===norm(k))&&!n.includes("율")&&!n.includes("ratio")&&!n.includes("동의");
+    const isD=KW.deduct.some(k=>n.includes(norm(k)))&&!KW.settle.some(k=>n.includes(norm(k)))&&!KW.sales.some(k=>n===norm(k))&&!KW.deductExclude.some(k=>n.includes(norm(k)));
     const hasNum=rows.slice(0,50).some(r=>num(r[i])!==0);
     if(!hasNum&&!isD)return;
     const l=document.createElement("label");l.className="chip"+(isD?" on":"");
@@ -220,6 +232,9 @@ function buildMap(sheet){
     c.appendChild(l);
   });
   const conf=ip>=0&&is>=0;
+  const noSettle=pick(KW.settle)<0, noFee=![...c.querySelectorAll("input:checked")].length;
+  adInfo=adInfo||"";
+  if(noSettle&&noFee)adInfo=(adInfo?adInfo+" · ":"")+"<b style='color:var(--red)'>정산금액 열도 수수료 열도 없어서 결제수수료 2.9%만 뺀 추정치입니다. 정산현황 파일을 올리면 정확해집니다.</b>";
   $("#mapCard").hidden=false;$("#mapDetails").open=!conf;
   $("#recog").hidden=false;
   $("#recog").innerHTML=`<b>인식한 열</b> · 시트 "${sheet}" · 상품명: ${headers[Math.max(ip,0)]||"?"} · 판매금액: ${headers[Math.max(is,0)]||"?"} · 정산금액: ${pick(KW.settle)>=0?headers[pick(KW.settle)]:"없음(계산)"} · 옵션ID: ${pick(KW.vid)>=0?headers[pick(KW.vid)]:"없음"}${adInfo?" · "+adInfo:""}${conf?"":" · <b style='color:var(--red)'>자동 인식이 불확실합니다. 아래에서 열을 확인하세요.</b>"}`;
