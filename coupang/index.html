@@ -12,10 +12,12 @@ h1{font-size:26px;margin:0 0 6px;letter-spacing:-.01em}
 .sub{color:var(--ink-2);margin:0 0 20px;max-width:70ch}
 .card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin-bottom:16px}
 .card h2{font-size:16px;margin:0 0 10px}
-.drop{border:2px dashed var(--line);border-radius:8px;padding:34px 20px;text-align:center;color:var(--ink-2);cursor:pointer;transition:border-color .15s}
+.drop{border:2px dashed var(--line);border-radius:8px;padding:30px 20px;text-align:center;color:var(--ink-2);cursor:pointer;transition:border-color .15s}
+.drop.main{background:var(--sun-soft);border-color:var(--sun)}
 .drop.over{border-color:var(--sun);background:var(--sun-soft)}
-.drop b{color:var(--ink)}
+.drop b{color:var(--ink);font-size:17px}
 .drop input{display:none}
+.drop.done{border-style:solid;border-color:var(--green);background:var(--green-soft)}
 .note{font-size:12.5px;color:var(--ink-3);margin-top:8px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
 label.f{display:grid;gap:4px;font-size:13px;color:var(--ink-2)}
@@ -36,11 +38,10 @@ th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;whit
 th{background:var(--code);font-size:12px;color:var(--ink-3);cursor:pointer;position:sticky;top:0}
 th.l,td.l{text-align:left;white-space:normal;min-width:160px;position:sticky;left:0;background:var(--paper);z-index:1}
 th.l{background:var(--code)}
-tr.loss td.l{background:var(--red-soft)}
-@media (max-width:640px){.wrap{padding:20px 12px 60px}h1{font-size:22px}.tile .v{font-size:17px}td.l{min-width:130px}}
-td.n{font-family:"IBM Plex Mono",monospace}
 tr.loss td{background:var(--red-soft)}
+tr.loss td.l{background:var(--red-soft)}
 tr.loss td.l::before{content:"적자 ";color:var(--red);font-weight:700;font-size:11px}
+td.n{font-family:"IBM Plex Mono",monospace}
 td input[type=number]{width:96px;padding:4px 6px;font-size:13px}
 .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 button{font:inherit;font-size:14px;padding:9px 14px;border-radius:6px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
@@ -48,23 +49,23 @@ button.pri{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--sun);outline-offset:2px}
 .hint{background:var(--sun-soft);border-left:4px solid var(--sun);padding:10px 14px;border-radius:4px;font-size:13.5px;margin-top:10px}
 .err{background:var(--red-soft);border-left:4px solid var(--red);padding:10px 14px;border-radius:4px;font-size:13.5px;margin-top:10px}
+.ok{background:var(--green-soft);border-left:4px solid var(--green);padding:10px 14px;border-radius:4px;font-size:13.5px;margin-top:10px}
+.recog{font-size:12.5px;color:var(--ink-2);margin-top:10px;line-height:1.8}
+.recog b{color:var(--ink)}
 footer{color:var(--ink-3);font-size:12.5px;margin-top:30px;line-height:1.7}
 canvas{display:none}
+@media (max-width:640px){.wrap{padding:20px 12px 60px}h1{font-size:22px}.tile .v{font-size:17px}td.l{min-width:130px}}
 </style>
 
 <div class="wrap">
 <h1>쿠팡 정산 역산기</h1>
-<p class="sub">정산 엑셀 올리면 끝. 상품별로 어디서 얼마 빠졌는지 나오고, 원가를 넣으면 적자 상품이 빨간색으로 뜹니다. 2026년 7월 개편 반영. 파일은 내 브라우저에서만 계산되고 어디로도 안 갑니다.</p>
+<p class="sub">윙에서 받은 정산 엑셀 올리면 끝. 상품(옵션)별로 어디서 얼마 빠졌는지 나오고, 원가를 넣으면 적자 상품이 빨간색으로 뜹니다. 광고 리포트를 같이 올리면 광고비까지 뺀 실마진이 나옵니다. 파일은 내 브라우저에서만 계산되고 어디로도 안 갑니다.</p>
 
 <div class="card">
-  <div class="drop" id="drop"><b>정산 엑셀 파일 올리기</b><br><span style="font-size:13px">클릭하거나 여기로 끌어다 놓으세요 · xlsx, xls, csv</span><input type="file" id="file" accept=".xlsx,.xls,.csv"></div>
-  <div class="note" style="margin-top:12px;line-height:1.9">
-    <b style="color:var(--ink)">엑셀은 여기서 받습니다</b><br>
-    ① 쿠팡 윙 로그인 → 위쪽 메뉴 <b>정산</b><br>
-    ② <b>정산현황</b> → 기간 선택 → <b>엑셀 다운로드 요청</b><br>
-    ③ 받은 파일을 그대로 올리면 됩니다. 매출내역 파일도 됩니다.
-  </div>
+  <div class="drop main" id="drop"><b>1. 정산 엑셀 올리기</b><br><span style="font-size:13px">윙 → 정산 → 정산현황 또는 매출내역 → 엑셀 다운로드. 클릭하거나 끌어다 놓기 · xlsx, xls, csv</span><input type="file" id="file" accept=".xlsx,.xls,.csv"></div>
+  <div class="drop" id="dropAd" style="margin-top:10px"><b>2. 광고 리포트 올리기 (선택)</b><br><span style="font-size:13px">광고센터 → 광고 보고서 → 옵션(상품)별 엑셀. 올리면 상품별 광고비가 빠진 실마진이 나옵니다</span><input type="file" id="fileAd" accept=".xlsx,.xls,.csv"></div>
   <div id="err" class="err" hidden></div>
+  <div id="recog" class="recog" hidden></div>
 </div>
 
 <div class="card" id="mapCard" hidden>
@@ -72,16 +73,18 @@ canvas{display:none}
   <div style="height:10px"></div>
   <div class="grid">
     <label class="f">상품명 열<select id="colProduct"></select></label>
-    <label class="f">옵션 열 (없으면 비움)<select id="colOption"></select></label>
+    <label class="f">옵션명 열 (없으면 비움)<select id="colOption"></select></label>
+    <label class="f">옵션ID 열 (광고 리포트 연결용)<select id="colVid"></select></label>
     <label class="f">수량 열 (없으면 1로 계산)<select id="colQty"></select></label>
     <label class="f">판매금액 열<select id="colSales"></select></label>
     <label class="f">정산금액 열 (있으면 우선 사용)<select id="colSettle"></select></label>
+    <label class="f">항목구분 열 (SALE/REFUND, 있으면 환불 반영)<select id="colType"></select></label>
   </div>
-  <div style="margin-top:12px;font-size:13px;color:var(--ink-2)">공제 항목으로 잡을 열. 수수료·이용료·반품·광고·보관·쿠폰이 들어간 열을 자동으로 켰습니다.</div>
+  <div style="margin-top:12px;font-size:13px;color:var(--ink-2)">공제 항목으로 잡을 열. 수수료·이용료·쿠폰·할인·반품·보관·공제가 들어간 열을 자동으로 켰습니다.</div>
   <div class="chips" id="chips"></div>
   <div class="grid" style="margin-top:12px">
     <label class="f">월 서비스이용료 (원) <input type="number" id="svcFee" value="55000"></label>
-    <label class="f">이용료 배분 방식<select id="svcMode"><option value="sales">매출 비중대로 상품에 배분</option><option value="none">배분 안 함 (총계에만 반영)</option></select></label>
+    <label class="f">이용료 배분 방식<select id="svcMode"><option value="sales">매출 비중대로 상품에 배분</option><option value="none">배분 안 함 (총계에만 반영)</option><option value="off">이용료 없음 (월매출 100만 미만)</option></select></label>
     <label class="f">정산 열이 없을 때 결제수수료 (%)<input type="number" id="payFee" value="2.9" step="0.1"></label>
   </div>
   <div class="btns"><button class="pri" id="run">다시 계산</button></div>
@@ -98,10 +101,10 @@ canvas{display:none}
     <button id="img">요약 이미지 저장</button>
     <button id="reset">다른 파일 올리기</button>
   </div>
-  <div class="note">기준: 정산 열이 있으면 그 값을 정산으로 쓰고, 없으면 판매금액에서 켜둔 공제 항목과 결제수수료를 뺍니다. 세금·환율·배송비 실비는 반영하지 않습니다. 숫자가 이상하면 열 맞추기를 다시 확인하세요.</div>
+  <div class="note">기준: 정산금액 열이 있으면 그 값을 정산으로 쓰고, 없으면 판매금액에서 켜둔 공제 항목과 결제수수료를 뺍니다. 광고비는 광고 리포트를 올렸을 때만 반영됩니다. 세금·환율·배송 실비는 반영하지 않습니다. 숫자가 이상하면 열 맞추기를 확인하세요.</div>
 </div>
 
-<footer>만든 곳: 스레드 @lazyfix_ · 귀찮은 일 보이면 툴로 만듭니다. 오류 제보는 스레드 답글로 주시면 하루 안에 고칩니다.</footer>
+<footer>만든 곳: 스레드 @lazyfix_ · 귀찮은 일 보이면 툴로 만듭니다. 열 인식이 안 되면 엑셀 첫 줄(열 이름)만 캡처해서 알려주세요. 하루 안에 맞춥니다.</footer>
 <canvas id="cv" width="1080" height="1080"></canvas>
 </div>
 
@@ -109,23 +112,44 @@ canvas{display:none}
 <script>
 (function(){
 const $=s=>document.querySelector(s);
+// 쿠팡 오픈API 매출내역(items) 한글 필드명 + 흔한 변형. 순서 = 우선순위.
 const KW={
-  product:["노출상품명","등록상품명","상품명","상품 이름","상품이름","product"],
-  option:["옵션명","옵션","option"],
-  qty:["수량","qty","quantity"],
-  sales:["최종결제금액","결제금액","판매금액","판매가","상품금액","매출","총 판매","판매 금액"],
-  settle:["정산금액","정산액","실정산","지급액","정산 금액","지급 금액"],
-  deduct:["수수료","이용료","반품","회수","광고","보관","쿠폰","할인","공제","차감","프로모션","배송비"]
+  product:["노출상품명","등록상품명","상품명","상품 이름","상품이름","productname","product"],
+  option:["옵션명","옵션 명","vendoritemname","옵션"],
+  vid:["옵션id","옵션 id","vendoritemid","옵션아이디","상품옵션id","광고집행 옵션id","광고집행옵션id","옵션 아이디"],
+  qty:["수량","판매수량","주문수량","quantity","qty"],
+  sales:["총판매가","최종결제금액","결제금액","판매금액","판매가","매출금액","상품금액","saleprice","saleamount","총 판매","판매 금액"],
+  settle:["정산금액","정산액","실정산","지급액","정산 금액","지급 금액","settlementamount","정산대상액"],
+  type:["항목구분","구분","saletype","판매유형","거래구분"],
+  deduct:["수수료","이용료","쿠폰","할인","반품","회수","광고","보관","공제","차감","프로모션","분담","부가세"],
+  refundWords:["refund","환불","반품","취소","cancel"]
 };
-let rows=[],headers=[],deductCols=[],results=[];
+const AD={vid:["옵션id","옵션 id","광고집행 옵션id","광고집행옵션id","vendoritemid","광고집행 상품id"],name:["광고집행 상품명","상품명","옵션명"],cost:["광고비","총 비용","총비용","광고 비용","비용","cost","spend","집행 금액","집행금액"]};
+let rows=[],headers=[],deductCols=[],results=[],adMap=null,adNameMap=null,adInfo="";
 const costMem=JSON.parse(localStorage.getItem("cs_cost")||"{}");
 
 function norm(s){return String(s??"").replace(/\s+/g,"").toLowerCase()}
-function num(v){if(v==null||v==="")return 0;if(typeof v==="number")return v;const n=parseFloat(String(v).replace(/[^\d.\-]/g,""));return isNaN(n)?0:n}
+function num(v){if(v==null||v==="")return 0;if(typeof v==="number")return v;const s=String(v).trim();const neg=/^\(.*\)$/.test(s)||s.startsWith("-");const n=parseFloat(s.replace(/[^\d.]/g,""));return isNaN(n)?0:(neg?-n:n)}
 function fmt(n){return Math.round(n).toLocaleString("ko-KR")}
-function pick(kws){const h=headers.map(norm);for(const k of kws){const i=h.findIndex(x=>x.includes(norm(k)));if(i>=0)return i}return -1}
-
+function pickIn(hdrs,kws){const h=hdrs.map(norm);for(const k of kws){const i=h.findIndex(x=>x===norm(k));if(i>=0)return i}for(const k of kws){const i=h.findIndex(x=>x.includes(norm(k)));if(i>=0)return i}return -1}
+function pick(kws){return pickIn(headers,kws)}
 function showErr(m){const e=$("#err");e.textContent=m;e.hidden=false}
+
+// 머리글 탐지: 모든 시트 상위 30행에서 "주문번호/상품명/정산" 키워드가 가장 많은 행
+function findTable(wb,keys){
+  let best=null;
+  for(const name of wb.SheetNames){
+    const aoa=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:""});
+    for(let r=0;r<Math.min(30,aoa.length);r++){
+      const row=aoa[r].map(c=>norm(c));
+      const strs=row.filter(c=>c&&isNaN(+c)).length;
+      const hits=keys.reduce((a,k)=>a+(row.some(c=>c.includes(norm(k)))?1:0),0);
+      const score=hits*10+Math.min(strs,20);
+      if(strs>=3&&hits>=1&&(!best||score>best.score))best={score,sheet:name,r,aoa};
+    }
+  }
+  return best;
+}
 
 function load(file){
   $("#err").hidden=true;
@@ -133,15 +157,39 @@ function load(file){
   r.onload=e=>{
     try{
       const wb=XLSX.read(e.target.result,{type:"array"});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
-      let hi=aoa.findIndex(r=>r.filter(c=>typeof c==="string"&&c.trim()).length>=4);
-      if(hi<0)return showErr("표 머리글을 찾지 못했습니다. 첫 시트에 열 이름이 있는지 확인하세요.");
-      headers=aoa[hi].map(h=>String(h).trim());
-      rows=aoa.slice(hi+1).filter(r=>r.some(c=>c!==""));
+      const t=findTable(wb,["상품명","주문번호","정산","판매","옵션"]);
+      if(!t)return showErr("표 머리글을 찾지 못했습니다. 엑셀 첫 줄에 '상품명'이나 '주문번호' 같은 열 이름이 있는지 확인하세요. 안 되면 첫 줄만 캡처해서 알려주세요.");
+      headers=t.aoa[t.r].map(h=>String(h).trim());
+      // 병합 머리글: 바로 아랫줄이 문자열만이면 합침
+      const nxt=t.aoa[t.r+1]||[];
+      if(nxt.length&&nxt.filter(c=>c!=="").length>=3&&nxt.every(c=>c===""||isNaN(+c))){headers=headers.map((h,i)=>(h+" "+String(nxt[i]||"")).trim());rows=t.aoa.slice(t.r+2)}else rows=t.aoa.slice(t.r+1);
+      rows=rows.filter(r=>r.some(c=>c!==""));
       if(!rows.length)return showErr("데이터 행이 없습니다.");
-      buildMap();
-    }catch(err){showErr("파일을 읽지 못했습니다. 엑셀에서 다시 저장해 올려보세요. ("+err.message+")")}
+      $("#drop").classList.add("done");
+      buildMap(t.sheet);
+    }catch(err){showErr("파일을 읽지 못했습니다. 엑셀에서 '다른 이름으로 저장'해 xlsx로 다시 올려보세요. ("+err.message+")")}
+  };
+  r.readAsArrayBuffer(file);
+}
+
+function loadAd(file){
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:"array"});
+      const t=findTable(wb,["광고비","비용","옵션","상품명"]);
+      if(!t)return showErr("광고 리포트에서 표 머리글을 찾지 못했습니다. 옵션ID와 광고비 열이 있는 보고서인지 확인하세요.");
+      const h=t.aoa[t.r].map(x=>String(x).trim());
+      const iv=pickIn(h,AD.vid),ic=pickIn(h,AD.cost),inm=pickIn(h,AD.name);
+      if(ic<0)return showErr("광고 리포트에서 광고비 열을 찾지 못했습니다. 열 이름에 '광고비' 또는 '비용'이 있어야 합니다.");
+      adMap=new Map();adNameMap=new Map();let total=0;
+      for(const row of t.aoa.slice(t.r+1)){const c=num(row[ic]);if(!c)continue;total+=c;
+        if(iv>=0){const k=norm(row[iv]);if(k)adMap.set(k,(adMap.get(k)||0)+c)}
+        if(inm>=0){const k=norm(row[inm]);if(k)adNameMap.set(k,(adNameMap.get(k)||0)+c)}}
+      adInfo=`광고 리포트 인식: ${iv>=0?"옵션ID로 연결":"상품명으로 연결"}, 광고비 합계 ${fmt(total)}원`;
+      $("#dropAd").classList.add("done");
+      if(results.length)run();else{$("#recog").hidden=false;$("#recog").innerHTML=adInfo+" · 정산 엑셀을 올리면 반영됩니다"}
+    }catch(err){showErr("광고 리포트를 읽지 못했습니다. ("+err.message+")")}
   };
   r.readAsArrayBuffer(file);
 }
@@ -150,16 +198,20 @@ function opts(sel,idx,allowNone){
   sel.innerHTML=(allowNone?'<option value="-1">없음</option>':"")+headers.map((h,i)=>`<option value="${i}">${h||"(빈 열 "+(i+1)+")"}</option>`).join("");
   sel.value=String(idx);
 }
-function buildMap(){
-  opts($("#colProduct"),Math.max(pick(KW.product),0),false);
+function buildMap(sheet){
+  const ip=pick(KW.product);
+  opts($("#colProduct"),Math.max(ip,0),false);
   opts($("#colOption"),pick(KW.option),true);
+  opts($("#colVid"),pick(KW.vid),true);
   opts($("#colQty"),pick(KW.qty),true);
-  opts($("#colSales"),Math.max(pick(KW.sales),0),false);
+  const is=pick(KW.sales);
+  opts($("#colSales"),Math.max(is,0),false);
   opts($("#colSettle"),pick(KW.settle),true);
-  const c=$("#chips");c.innerHTML="";deductCols=[];
+  opts($("#colType"),pick(KW.type),true);
+  const c=$("#chips");c.innerHTML="";
   headers.forEach((h,i)=>{
     const n=norm(h);if(!n)return;
-    const isD=KW.deduct.some(k=>n.includes(norm(k)))&&!KW.settle.some(k=>n.includes(norm(k)))&&!KW.sales.some(k=>n.includes(norm(k)));
+    const isD=KW.deduct.some(k=>n.includes(norm(k)))&&!KW.settle.some(k=>n.includes(norm(k)))&&!KW.sales.some(k=>n===norm(k))&&!n.includes("율")&&!n.includes("ratio")&&!n.includes("동의");
     const hasNum=rows.slice(0,50).some(r=>num(r[i])!==0);
     if(!hasNum&&!isD)return;
     const l=document.createElement("label");l.className="chip"+(isD?" on":"");
@@ -167,57 +219,68 @@ function buildMap(){
     l.querySelector("input").addEventListener("change",ev=>l.classList.toggle("on",ev.target.checked));
     c.appendChild(l);
   });
-  $("#mapCard").hidden=false;$("#mapDetails").open=false;
+  const conf=ip>=0&&is>=0;
+  $("#mapCard").hidden=false;$("#mapDetails").open=!conf;
+  $("#recog").hidden=false;
+  $("#recog").innerHTML=`<b>인식한 열</b> · 시트 "${sheet}" · 상품명: ${headers[Math.max(ip,0)]||"?"} · 판매금액: ${headers[Math.max(is,0)]||"?"} · 정산금액: ${pick(KW.settle)>=0?headers[pick(KW.settle)]:"없음(계산)"} · 옵션ID: ${pick(KW.vid)>=0?headers[pick(KW.vid)]:"없음"}${adInfo?" · "+adInfo:""}${conf?"":" · <b style='color:var(--red)'>자동 인식이 불확실합니다. 아래에서 열을 확인하세요.</b>"}`;
   run();
   $("#resCard").scrollIntoView({behavior:"smooth"});
 }
 
 function run(){
-  const ip=+$("#colProduct").value,io=+$("#colOption").value,iq=+$("#colQty").value,is=+$("#colSales").value,ist=+$("#colSettle").value;
+  const ip=+$("#colProduct").value,io=+$("#colOption").value,iv=+$("#colVid").value,iq=+$("#colQty").value,is=+$("#colSales").value,ist=+$("#colSettle").value,ity=+$("#colType").value;
   deductCols=[...document.querySelectorAll("#chips input:checked")].map(x=>+x.dataset.i).filter(i=>i!==is&&i!==ist);
-  const payFee=num($("#payFee").value)/100, svc=num($("#svcFee").value), svcMode=$("#svcMode").value;
+  const payFee=num($("#payFee").value)/100, svcMode=$("#svcMode").value, svc=svcMode==="off"?0:num($("#svcFee").value);
   const g=new Map();
   for(const r of rows){
     const name=String(r[ip]??"").trim()||"(상품명 없음)";
     const opt=io>=0?String(r[io]??"").trim():"";
-    const key=opt?name+" / "+opt:name;
-    const o=g.get(key)||{name,opt,qty:0,sales:0,settle:0,hasSettle:ist>=0,ded:{},rows:0};
-    o.rows++;o.qty+=iq>=0?Math.abs(num(r[iq]))||0:1;
-    o.sales+=num(r[is]);
-    if(ist>=0)o.settle+=num(r[ist]);
-    for(const i of deductCols){o.ded[headers[i]]=(o.ded[headers[i]]||0)+Math.abs(num(r[i]))}
+    const vid=iv>=0?norm(r[iv]):"";
+    const key=vid||(opt?name+" / "+opt:name);
+    const isRefund=ity>=0&&KW.refundWords.some(w=>norm(r[ity]).includes(w));
+    const sign=isRefund?-1:1;
+    const o=g.get(key)||{name,opt,vid,qty:0,sales:0,settle:0,hasSettle:ist>=0,ded:{},rows:0,refunds:0};
+    o.rows++;if(isRefund)o.refunds++;
+    const q=iq>=0?Math.abs(num(r[iq]))||0:1;
+    o.qty+=sign*q;
+    const sv=num(r[is]);o.sales+=(isRefund&&sv>0)?-sv:sv;
+    if(ist>=0){const st=num(r[ist]);o.settle+=(isRefund&&st>0)?-st:st}
+    for(const i of deductCols){const v=Math.abs(num(r[i]));o.ded[headers[i]]=(o.ded[headers[i]]||0)+(isRefund?-v:v)}
     g.set(key,o);
   }
   results=[...g.values()];
-  const totalSales=results.reduce((a,o)=>a+o.sales,0)||1;
+  const totalSales=results.reduce((a,o)=>a+Math.max(o.sales,0),0)||1;
   for(const o of results){
     o.dedSum=Object.values(o.ded).reduce((a,b)=>a+b,0);
     if(!o.hasSettle){o.pay=o.sales*payFee;o.settle=o.sales-o.dedSum-o.pay}else{o.pay=0}
-    o.svc=svcMode==="sales"?svc*(o.sales/totalSales):0;
+    o.svc=svcMode==="sales"?svc*(Math.max(o.sales,0)/totalSales):0;
+    o.ad=0;
+    if(adMap&&o.vid&&adMap.has(o.vid))o.ad=adMap.get(o.vid);
+    else if(adNameMap){const k=norm(o.name);if(adNameMap.has(k))o.ad=adNameMap.get(k)}
     o.unit=costMem[o.name]??0;
     calc(o);
   }
   render();
 }
-function calc(o){o.cost=o.unit*o.qty;o.margin=o.settle-o.svc-o.cost;o.rate=o.sales?o.margin/o.sales*100:0}
+function calc(o){o.cost=o.unit*Math.max(o.qty,0);o.margin=o.settle-o.svc-o.ad-o.cost;o.rate=o.sales?o.margin/o.sales*100:0}
 
 let sortKey="margin",sortAsc=true;
 function render(){
-  const svcMode=$("#svcMode").value,svc=num($("#svcFee").value);
-  const T=results.reduce((a,o)=>{a.sales+=o.sales;a.ded+=o.dedSum+o.pay;a.settle+=o.settle;a.margin+=o.margin;a.loss+=o.margin<0?1:0;return a},{sales:0,ded:0,settle:0,margin:0,loss:0});
+  const svcMode=$("#svcMode").value,svc=svcMode==="off"?0:num($("#svcFee").value);
+  const T=results.reduce((a,o)=>{a.sales+=o.sales;a.ded+=o.dedSum+o.pay;a.settle+=o.settle;a.ad+=o.ad;a.margin+=o.margin;a.loss+=o.margin<0?1:0;return a},{sales:0,ded:0,settle:0,ad:0,margin:0,loss:0});
   const svcTotal=svcMode==="none"?svc:0;
-  $("#tiles").innerHTML=[
-    ["총 판매금액",fmt(T.sales)+"원"],["빠진 돈 합계",fmt(T.ded+svcTotal)+"원"],["정산 합계",fmt(T.settle-svcTotal)+"원"],
-    ["실마진 합계",fmt(T.margin-svcTotal)+"원",T.margin-svcTotal<0],["적자 상품",T.loss+"개",T.loss>0],["상품 수",results.length+"개"]
-  ].map(([k,v,bad])=>`<div class="tile${bad?" bad":""}"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+  const tiles=[["총 판매금액",fmt(T.sales)+"원"],["빠진 돈 합계",fmt(T.ded+svcTotal+T.ad)+"원"],["정산 합계",fmt(T.settle-svcTotal)+"원"]];
+  if(adMap||adNameMap)tiles.push(["광고비",fmt(T.ad)+"원"]);
+  tiles.push(["실마진 합계",fmt(T.margin-svcTotal)+"원",T.margin-svcTotal<0],["적자 상품",T.loss+"개",T.loss>0],["상품 수",results.length+"개"]);
+  $("#tiles").innerHTML=tiles.map(([k,v,bad])=>`<div class="tile${bad?" bad":""}"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
   const dedNames=[...new Set(results.flatMap(o=>Object.keys(o.ded)))];
-  const cols=[["name","상품",true],["qty","수량"],["sales","판매금액"],...dedNames.map(n=>["ded:"+n,n]),...(results.some(o=>o.pay)?[["pay","결제수수료"]]:[]),["settle","정산"],...(svcMode==="sales"?[["svc","이용료 배분"]]:[]),["unit","원가(단가)"],["margin","실마진"],["rate","마진율"]];
+  const cols=[["name","상품",true],["qty","수량"],["sales","판매금액"],...dedNames.map(n=>["ded:"+n,n]),...(results.some(o=>o.pay)?[["pay","결제수수료"]]:[]),["settle","정산"],...(svcMode==="sales"?[["svc","이용료 배분"]]:[]),...((adMap||adNameMap)?[["ad","광고비"]]:[]),["unit","원가(단가)"],["margin","실마진"],["rate","마진율"]];
   $("#tbl thead").innerHTML="<tr>"+cols.map(([k,l,left])=>`<th class="${left?"l":""}" data-k="${k}">${l}${sortKey===k?(sortAsc?" ▲":" ▼"):""}</th>`).join("")+"</tr>";
   const val=(o,k)=>k.startsWith("ded:")?(o.ded[k.slice(4)]||0):o[k];
   const sorted=[...results].sort((a,b)=>{const x=val(a,sortKey),y=val(b,sortKey);return (typeof x==="string"?x.localeCompare(y):x-y)*(sortAsc?1:-1)});
-  $("#tbl tbody").innerHTML=sorted.map((o,ri)=>`<tr class="${o.margin<0?"loss":""}" data-key="${o.name}${o.opt?" / "+o.opt:""}">`+cols.map(([k,l,left])=>{
-    if(k==="name")return `<td class="l">${o.name}${o.opt?`<div style="font-size:12px;color:var(--ink-3)">${o.opt}</div>`:""}</td>`;
-    if(k==="unit")return `<td><input type="number" value="${o.unit||""}" placeholder="0" data-name="${o.name}"></td>`;
+  $("#tbl tbody").innerHTML=sorted.map(o=>`<tr class="${o.margin<0?"loss":""}">`+cols.map(([k])=>{
+    if(k==="name")return `<td class="l">${o.name}${o.opt?`<div style="font-size:12px;color:var(--ink-3)">${o.opt}</div>`:""}${o.refunds?`<div style="font-size:11px;color:var(--red)">환불 ${o.refunds}건 반영</div>`:""}</td>`;
+    if(k==="unit")return `<td><input type="number" value="${o.unit||""}" placeholder="0" data-name="${o.name.replace(/"/g,"&quot;")}"></td>`;
     if(k==="rate")return `<td class="n">${o.rate.toFixed(1)}%</td>`;
     if(k==="qty")return `<td class="n">${fmt(o.qty)}</td>`;
     return `<td class="n">${fmt(val(o,k))}</td>`;
@@ -231,9 +294,8 @@ function render(){
 }
 
 $("#run").onclick=run;
-$("#svcMode").onchange=()=>{if(results.length)run()};
-$("#svcFee").onchange=()=>{if(results.length)run()};
-$("#reset").onclick=()=>{rows=[];results=[];$("#mapCard").hidden=true;$("#resCard").hidden=true;$("#file").value="";window.scrollTo({top:0,behavior:"smooth"})};
+["#svcMode","#svcFee","#payFee"].forEach(s=>$(s).onchange=()=>{if(results.length)run()});
+$("#reset").onclick=()=>{rows=[];results=[];adMap=null;adNameMap=null;adInfo="";$("#mapCard").hidden=true;$("#resCard").hidden=true;$("#recog").hidden=true;$("#file").value="";$("#fileAd").value="";$("#drop").classList.remove("done");$("#dropAd").classList.remove("done");window.scrollTo({top:0,behavior:"smooth"})};
 
 $("#csv").onclick=()=>{
   const ths=[...document.querySelectorAll("#tbl th")].map(t=>t.textContent.replace(/ [▲▼]$/,""));
@@ -246,8 +308,7 @@ $("#img").onclick=()=>{
   const cv=$("#cv"),c=cv.getContext("2d");
   c.fillStyle="#F2B203";c.fillRect(0,0,1080,1080);
   c.fillStyle="#1B2A41";c.font="700 56px 'Noto Sans KR',sans-serif";c.fillText("쿠팡 정산 역산 결과",70,120);
-  const tiles=[...document.querySelectorAll("#tiles .tile")].map(t=>[t.querySelector(".k").textContent,t.querySelector(".v").textContent]);
-  c.font="400 34px 'Noto Sans KR',sans-serif";
+  const tiles=[...document.querySelectorAll("#tiles .tile")].map(t=>[t.querySelector(".k").textContent,t.querySelector(".v").textContent]).slice(0,6);
   tiles.forEach(([k,v],i)=>{const y=230+i*110;c.font="400 30px 'Noto Sans KR',sans-serif";c.fillText(k,70,y);c.font="700 52px 'IBM Plex Mono',monospace";c.fillText(v,70,y+58)});
   const worst=[...results].sort((a,b)=>a.margin-b.margin).slice(0,3);
   c.font="700 34px 'Noto Sans KR',sans-serif";c.fillText("가장 많이 새는 상품",70,920);
@@ -256,11 +317,15 @@ $("#img").onclick=()=>{
   const a=document.createElement("a");a.href=cv.toDataURL("image/png");a.download="쿠팡_정산_요약.png";a.click();
 };
 
-const drop=$("#drop"),fi=$("#file");
-drop.onclick=()=>fi.click();
-fi.onchange=()=>fi.files[0]&&load(fi.files[0]);
-["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over")}));
-["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over")}));
-drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];f&&load(f)});
+function wire(dropId,inputId,handler){
+  const drop=$(dropId),fi=$(inputId);
+  drop.onclick=()=>fi.click();
+  fi.onchange=()=>fi.files[0]&&handler(fi.files[0]);
+  ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();drop.classList.add("over")}));
+  ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();drop.classList.remove("over")}));
+  drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];f&&handler(f)});
+}
+wire("#drop","#file",load);
+wire("#dropAd","#fileAd",loadAd);
 })();
 </script>
