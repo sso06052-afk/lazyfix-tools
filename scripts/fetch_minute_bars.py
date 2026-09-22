@@ -5,9 +5,14 @@
 - 저장: data/minute/<symbol>/<YYYY-MM-DD>.json (날짜별 한 파일) + data/minute/index.json(종목별 날짜 목록).
   이미 있는 날짜는 건너뛰고 새 날짜만 추가해요(누적). 첫 실행이면 최근 30일을 채워요.
 - 장중(아직 안 끝난) 날짜는 저장하지 않아요. 장 시간: KR 09:00~15:30 KST, US 09:30~16:00 ET.
-- 파일 형식(작게): {"s","d","m","tz","open":"09:00","first":분 오프셋,"bars":[[시가,고가,저가,종가,거래량],...]}
+- 파일 형식(작게): {"s","d","m","tz","open":"09:00","first":분 오프셋,"closeBar":1,"bars":[[시가,고가,저가,종가,거래량],...]}
   bars[i]는 장 시작 + (first + i)분 봉이에요. 거래가 없던 분은 직전 종가로 채워요(거래량 0) — 앱이 1분에 한 봉씩 넘겨요.
-- 표준 라이브러리만 써요. 실행: python scripts/fetch_minute_bars.py [--days 30]
+- 시가·종가는 공식 값으로 맞춰요(2026-09-23 확인): 첫 봉 시가 = 일봉 시가, 마지막 봉(closeBar) = 일봉 종가(거래량 0).
+  야후 국내 1분봉은 대부분 09:00~14:59까지만 있고 15:30 종가(동시호가)가 빠져 있어서, 마지막 1분봉 종가가 공식 종가와
+  최대 2% 달랐어요(320일 중 32일만 일치). 미국은 15:59 봉 뒤에 16:00 종가 봉을 붙여요.
+- 장 시작부터 없는 날(야후 30일 한도 경계에서 잘린 날)과 일봉 종가가 아직 없는 날은 저장하지 않아요(다음 실행에 다시 봐요).
+- 표준 라이브러리만 써요. 실행: python scripts/fetch_minute_bars.py [--days 30] [--rebuild]
+  --rebuild: 받을 수 있는 날짜(최근 30일)를 모두 다시 만들어요(형식을 바꿨을 때).
 """
 import datetime
 import json
@@ -84,6 +89,38 @@ def collect(ticker, market, days):
     return by_day
 
 
+def fetch_daily(ticker):
+    """{날짜: (공식 시가, 공식 종가)} — 일봉(최근 3개월). 값이 비어 있는 날은 빼요."""
+    url = f'https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?range=3mo&interval=1d'
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=25) as r:
+                res = json.load(r)['chart']['result'][0]
+            break
+        except Exception:
+            if attempt == 2:
+                raise
+            time.sleep(2 + attempt * 3)
+    tz = datetime.timezone(datetime.timedelta(seconds=res['meta']['gmtoffset']))
+    q = res['indicators']['quote'][0]
+    opens, out = {}, {}
+    for i, ts in enumerate(res.get('timestamp') or []):
+        day = datetime.datetime.fromtimestamp(ts, tz).date().isoformat()
+        o, c = q['open'][i], q['close'][i]
+        if o is not None:
+            opens[day] = o
+        if o is not None and c is not None:
+            out[day] = (o, c)
+    # 장 마감 직후엔 최신 일봉 종가가 비어 있을 때가 있어요(fetch_stock_prices.py와 같은 처리): 확정 종가로 채워요.
+    meta = res['meta']
+    rm_time, rm_price = meta.get('regularMarketTime'), meta.get('regularMarketPrice')
+    if rm_time and rm_price and time.time() > rm_time + 600:
+        rm_day = datetime.datetime.fromtimestamp(rm_time, tz).date().isoformat()
+        if rm_day not in out and rm_day in opens:
+            out[rm_day] = (opens[rm_day], rm_price)
+    return out
+
+
 def is_settled(day_str, market):
     tzname, _, close_t = SESSION[market]
     tz = ZoneInfo(tzname)
@@ -92,13 +129,16 @@ def is_settled(day_str, market):
     return datetime.datetime.now(tz) >= close_at
 
 
-def to_file(symbol, market, day_str, minutes):
+def to_file(symbol, market, day_str, minutes, official):
     tzname, open_t, _ = SESSION[market]
     digits = 0 if market == 'KR' else 2
 
     def r(x):
         return int(round(x)) if digits == 0 else round(x, digits)
 
+    # 국내 15:00 봉(가끔 있는 동시호가 자리)은 버리고 공식 종가 봉으로 다시 붙여요.
+    cap = 360 if market == 'KR' else 390
+    minutes = {off: bar for off, bar in minutes.items() if off < cap}
     offs = sorted(minutes)
     first, last = offs[0], offs[-1]
     bars = []
@@ -112,7 +152,11 @@ def to_file(symbol, market, day_str, minutes):
         o, h, l, c, v = bar
         prev = [r(o), r(h), r(l), r(c), int(v)]
         bars.append(prev)
-    return {'s': symbol, 'd': day_str, 'm': market, 'tz': tzname, 'open': open_t.strftime('%H:%M'), 'first': first, 'bars': bars}
+    day_open, day_close = r(official[0]), r(official[1])
+    b0 = bars[0]
+    bars[0] = [day_open, max(b0[1], day_open), min(b0[2], day_open), b0[3], b0[4]]
+    bars.append([day_close, day_close, day_close, day_close, 0])  # 공식 종가 봉(국내 15:30·미국 16:00)
+    return {'s': symbol, 'd': day_str, 'm': market, 'tz': tzname, 'open': open_t.strftime('%H:%M'), 'first': first, 'closeBar': 1, 'bars': bars}
 
 
 def main():
@@ -120,6 +164,7 @@ def main():
     if '--days' in sys.argv:
         days = int(sys.argv[sys.argv.index('--days') + 1])
     days = min(days, 29)  # 야후 1분봉 한도(약 30일) 안쪽
+    rebuild = '--rebuild' in sys.argv
     index_path = ROOT / 'index.json'
     index = json.loads(index_path.read_text(encoding='utf-8')) if index_path.exists() else {'symbols': {}}
     added = 0
@@ -131,13 +176,22 @@ def main():
         have = {p.stem for p in folder.glob('*.json')}
         try:
             by_day = collect(ticker, market, days)
+            daily = fetch_daily(ticker)
         except Exception as e:  # 한 종목 실패가 전체를 막지 않게
             print('skip', symbol, e)
-            by_day = {}
+            by_day, daily = {}, {}
         for day_str, minutes in sorted(by_day.items()):
-            if day_str in have or not is_settled(day_str, market) or len(minutes) < MIN_BARS:
+            complete = len(minutes) >= MIN_BARS and min(minutes) <= 1  # 장 시작부터 있어야 해요
+            if rebuild and day_str in have and complete and day_str in daily:
+                have.discard(day_str)
+            elif rebuild and day_str in have and not complete:
+                (folder / f'{day_str}.json').unlink()  # 예전에 잘못 들어간 잘린 날
+                have.discard(day_str)
+                print('removed partial', symbol, day_str)
                 continue
-            data = to_file(symbol, market, day_str, minutes)
+            if day_str in have or not is_settled(day_str, market) or not complete or day_str not in daily:
+                continue
+            data = to_file(symbol, market, day_str, minutes, daily[day_str])
             (folder / f'{day_str}.json').write_text(json.dumps(data, separators=(',', ':')), encoding='utf-8')
             have.add(day_str)
             added += 1
