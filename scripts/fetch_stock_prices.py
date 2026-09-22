@@ -32,9 +32,19 @@ def chart(ticker, query):
         else:
             series.append({'d': d, 'c': c})
     # 장이 아직 열려 있으면 오늘 봉은 확정 종가가 아니라서 빼요
-    end = res['meta'].get('currentTradingPeriod', {}).get('regular', {}).get('end')
+    meta = res['meta']
+    regular = meta.get('currentTradingPeriod', {}).get('regular', {})
+    end = regular.get('end')
     if end and time.time() < end + 600 and series and series[-1]['d'] == datetime.datetime.fromtimestamp(end, tz).date().isoformat():
         series.pop()
+    # 장 마감 직후엔 일봉 종가가 아직 비어 있을 때가 있어요(2026-09-22 09:44 KST 실행에서 미국 9/21 누락).
+    # 그날 정규장이 끝났고(regularMarketTime이 장 마감 시각 이상이거나 다음 장이 이미 잡힘) 일봉이 없으면 확정 종가로 채워요.
+    rm_time, rm_price = meta.get('regularMarketTime'), meta.get('regularMarketPrice')
+    if rm_time and rm_price and time.time() > rm_time + 600:
+        rm_day = datetime.datetime.fromtimestamp(rm_time, tz).date().isoformat()
+        session_over = (end and rm_time >= end) or (regular.get('start') and regular['start'] > rm_time)
+        if session_over and (not series or series[-1]['d'] < rm_day):
+            series.append({'d': rm_day, 'c': rm_price})
     return series
 
 
