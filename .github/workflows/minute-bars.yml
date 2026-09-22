@@ -1,0 +1,37 @@
+name: minute bars (timemachine)
+
+# 주식 모의투자(토스 미니앱) 타임머신이 읽는 과거 1분봉을 날짜별로 쌓아요(data/minute/).
+# 하루 1회, 미국 장 마감 뒤(07:30 KST) — 그날 국내·미국 장이 모두 끝난 뒤예요. 이미 있는 날짜는 건너뛰어요.
+# 야후 1분봉은 최근 약 30일만 주므로, 며칠 실행이 빠져도 다음 실행이 30일 안쪽은 채워요.
+on:
+  schedule:
+    - cron: '30 22 * * 1-5'
+    - cron: '30 1 * * 2-6'   # 보조(예약 실행이 밀리거나 빠질 때 대비, 있는 날짜는 건너뜀)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# 종가 스냅샷과 같은 그룹 — 두 워크플로가 동시에 main에 푸시하지 않게 해요.
+concurrency:
+  group: stock-prices
+  cancel-in-progress: false
+
+jobs:
+  minute:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/fetch_minute_bars.py
+      - name: commit if changed
+        run: |
+          git add data/minute
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "minute bars $(date -u +%Y-%m-%dT%H:%MZ)"
+          git pull --rebase origin main
+          git push
