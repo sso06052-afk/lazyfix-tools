@@ -9,6 +9,10 @@
   (예전엔 한 종목만 실패해도 스크립트가 통째로 죽어서 그날 전 종목이 옛 종가에 멈췄어요.)
 - 전 종목이 실패하면(야후 차단 등) 파일을 쓰지 않고 실패(exit 1)로 끝나요.
 - 타임머신 1분봉(fetch_minute_bars.py)은 이 목록과 따로 가요(기존 32종목 그대로).
+
+지수(2026-10-01 추가): 코스피 지수 ^KS11 — 앱의 '오늘의 한 문제'(다음 거래일 코스피가 오를까 내릴까) 채점용.
+- 매매 종목이 아니라서 앱 종목 목록·검색에는 없어요. 출력 키는 야후 티커 그대로 "^KS11", "ex": "IDX".
+- 지수는 소수 둘째 자리까지 남겨요(6971.35). 실패 처리는 종목과 같아요(직전 값 유지).
 """
 import json, sys, time, urllib.request, datetime, pathlib
 
@@ -36,12 +40,16 @@ US = ['NVDA', 'AAPL', 'TSLA', 'MSFT', 'AMZN', 'GOOGL', 'META', 'AVGO',
       'PYPL', 'OKLO',
       # ETF
       'QQQ', 'SPY', 'VOO', 'SCHD', 'TQQQ', 'SOXL', 'JEPI', 'TLT']
-EXCHANGE = {**{c: 'KS' for c in KS}, **{c: 'KQ' for c in KQ}, **{c: 'US' for c in US}}
+# 지수 — 매매 종목 아님(앱 퀴즈 채점용). 야후 티커 그대로 키로 써요.
+IDX = ['^KS11']
+EXCHANGE = {**{c: 'KS' for c in KS}, **{c: 'KQ' for c in KQ}, **{c: 'US' for c in US}, **{c: 'IDX' for c in IDX}}
 UA = {'User-Agent': 'Mozilla/5.0'}
 
 
 def yahoo_ticker(code):
     ex = EXCHANGE[code]
+    if ex == 'IDX':
+        return code.replace('^', '%5E')  # URL 경로에 '^'를 그대로 못 넣어요
     return code if ex == 'US' else f'{code}.{ex}'
 
 
@@ -85,7 +93,7 @@ def chart(ticker, query):
 
 def symbol_entry(code):
     series = chart(yahoo_ticker(code), 'range=3mo')
-    digits = 2 if EXCHANGE[code] == 'US' else 0
+    digits = 2 if EXCHANGE[code] in ('US', 'IDX') else 0
     pts = [{'d': p['d'], 'c': round(p['c'], digits) if digits else int(round(p['c']))} for p in series[-60:]]
     if len(pts) < 2 or not all(p['c'] > 0 for p in pts):
         raise ValueError(f'시리즈 부족·이상({len(pts)}개)')
@@ -112,7 +120,7 @@ def main():
         out['usdKrw'] = prev['usdKrw']
         print(f'::warning::환율(KRW=X) 실패, 직전 값 {prev["usdKrw"]} 유지: {e}', file=sys.stderr)
     fresh, kept, lost = 0, [], []
-    for code in KS + KQ + US:
+    for code in KS + KQ + US + IDX:
         try:
             out['symbols'][code] = symbol_entry(code)
             fresh += 1
