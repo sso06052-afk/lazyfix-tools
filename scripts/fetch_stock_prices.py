@@ -2,7 +2,7 @@
 원본: appintoss/invest-friends-league/scripts/fetch_prices.py (같은 내용, 기본 출력 경로만 달라요).
 출처: Yahoo Finance 차트(하루 1회 종가만 사용). 표준 라이브러리만 써요.
 
-종목 목록(2026-10-01 135종목, 근거: appintoss/docs/apps/invest-friends-league/universe-2026-10-01.md)
+종목 목록(2026-10-01 138종목, 근거: appintoss/docs/apps/invest-friends-league/universe-2026-10-01.md)
 - 거래소를 종목마다 들고 있어요: KS=코스피(.KS), KQ=코스닥(.KQ), US=미국(티커 그대로). 국내 ETF는 코스피 상장이라 KS.
   출력에도 종목마다 "ex"(KS/KQ/US)로 남겨요.
 - 종목 하나가 실패해도 나머지는 갱신해요 — 실패한 종목은 직전 파일의 값을 그대로 두고 로그(::warning::)에 남겨요.
